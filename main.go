@@ -18,6 +18,8 @@ func main() {
 
 	e.GET("/book", ex.handleGetBook)
 
+	e.DELETE("/cancel-order", ex.cancelOrder)
+
 	e.POST("/place-order", ex.handlePlaceOrder)
 
 	e.Start(":3000")
@@ -60,6 +62,57 @@ type PlaceOrderRequest struct {
 	Market Market
 }
 
+type CancelOrderRequest struct {
+	OrderID int64
+	Market  Market
+}
+
+func (ex *Exchange) GetOrderByID(market Market, id int64) *orderbook.Order {
+	ob := ex.orderbook[market]
+	// Search in asks
+	for _, limit := range ob.Asks() {
+		for _, order := range limit.Orders {
+			if order.ID == id {
+				return order
+			}
+		}
+	}
+	// Search in bids
+	for _, limit := range ob.Bids() {
+		for _, order := range limit.Orders {
+			if order.ID == id {
+				return order
+			}
+		}
+	}
+	return nil
+}
+
+func (ex *Exchange) cancelOrder(c echo.Context) error {
+
+	var cancelOrder CancelOrderRequest
+
+	if err := json.NewDecoder(c.Request().Body).Decode(&cancelOrder); err != nil {
+		return err
+	}
+
+	ob := ex.orderbook[cancelOrder.Market]
+
+	order := ex.GetOrderByID(cancelOrder.Market, cancelOrder.OrderID)
+
+	if order == nil {
+		return c.JSON(http.StatusBadRequest, map[string]any{"msg": "order not found"})
+	}
+
+	if order.Bid {
+		ob.CancelOrder(order)
+		return c.JSON(http.StatusOK, map[string]any{"msg": "order cancelled"})
+	}
+
+	return nil
+
+}
+
 func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 
 	var placemarkerorder PlaceOrderRequest
@@ -88,6 +141,7 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 }
 
 type Order struct {
+	ID        int64
 	Price     float64
 	Size      float64
 	Bid       bool
@@ -121,6 +175,7 @@ func (ex *Exchange) handleGetBook(c echo.Context) error {
 
 		for _, order := range limit.Orders {
 			o := &Order{
+				ID:        order.ID,
 				Price:     limit.Price,
 				Size:      order.Size(),
 				Bid:       order.Bid,
@@ -135,6 +190,7 @@ func (ex *Exchange) handleGetBook(c echo.Context) error {
 
 		for _, order := range limit.Orders {
 			o := &Order{
+				ID:        order.ID,
 				Price:     limit.Price,
 				Size:      order.Size(),
 				Bid:       order.Bid,

@@ -2,6 +2,7 @@ package orderbook
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 	"time"
 )
@@ -14,6 +15,7 @@ type Match struct {
 }
 
 type Order struct {
+	ID        int64
 	size      float64
 	Bid       bool
 	Limit     *Limit
@@ -32,6 +34,7 @@ func (o *Order) String() string {
 
 func NewOrder(bid bool, size float64) *Order {
 	return &Order{
+		ID:        int64(rand.Intn(100000)),
 		size:      size,
 		Bid:       bid,
 		Timestamp: time.Now().UnixNano(),
@@ -251,7 +254,7 @@ func (ob *Orderbook) PlaceLimitOrder(price float64, o *Order) {
 
 }
 
-func (ob *Orderbook) cancelOrder(o *Order) {
+func (ob *Orderbook) CancelOrder(o *Order) {
 	limit := o.Limit
 	limit.DeleteOrder(o)
 }
