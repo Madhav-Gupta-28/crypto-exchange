@@ -52,12 +52,12 @@ func (o Orders) Swap(i, j int)      { o[i], o[j] = o[j], o[i] }
 func (o Orders) Less(i, j int) bool { return o[i].Timestamp < o[j].Timestamp }
 
 func (o *Order) String() string {
-	return fmt.Sprintf("size : [%.2f]", o.size)
+	return fmt.Sprintf("UserID: [%d], Size: [%.2f]", o.UserID, o.size)
 }
 
-func NewOrder(bid bool, size float64, userID int64) *Order {
+func NewOrder(bid bool, size float64, id int64) *Order {
 	return &Order{
-		UserID:    userID,
+		UserID:    id,
 		ID:        int64(rand.Intn(100000)),
 		size:      size,
 		Bid:       bid,

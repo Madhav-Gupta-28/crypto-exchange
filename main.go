@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -8,9 +9,11 @@ import (
 	"net/http"
 
 	"github.com/Madhav-Gupta-28/crypto-exchange/orderbook"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/labstack/echo/v4"
+	// "github.com/Madhav-Gupta-28/crypto-exchange/util" // Adjust the path as necessary
 )
 
 func main() {
@@ -19,17 +22,32 @@ func main() {
 	// Echo Instance
 	e := echo.New()
 
-	client, err := ethclient.Dial("http://localhost:8545")
+	e.HTTPErrorHandler = httpErrorHandler
+
+	client, _ := ethclient.Dial("http://localhost:8545")
+
+	ex := NewExchange("4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d", client)
+
+	privateKey, err := crypto.HexToECDSA("6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1")
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(client)
+	user := &User{
+		Id:         9,
+		PrivateKey: privateKey,
+	}
 
-	e.HTTPErrorHandler = httpErrorHandler
+	ex.Users[user.Id] = user
 
-	ex := NewExchange("4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d")
+	fmt.Println(ex.Users)
+
+	address := "0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0"
+
+	balance, _ := ex.client.BalanceAt(context.Background(), common.HexToAddress(address), nil)
+
+	fmt.Println(balance)
 
 	e.GET("/book", ex.handleGetBook)
 
@@ -56,7 +74,7 @@ type (
 	}
 
 	PlaceOrderRequest struct {
-		userId int64
+		UserId float64
 		Type   OrderType // limit or market
 		Bid    bool
 		Size   float64
@@ -65,6 +83,7 @@ type (
 	}
 
 	Exchange struct {
+		client     *ethclient.Client
 		Users      map[int64]*User
 		orders     map[int64]int64
 		PrivateKey *ecdsa.PrivateKey
@@ -93,6 +112,7 @@ type (
 	}
 
 	User struct {
+		Id         int64
 		PrivateKey *ecdsa.PrivateKey
 	}
 )
@@ -100,6 +120,7 @@ type (
 // const decleration
 const (
 	MarketEth Market = "ETH"
+	to        string = "0x1dF62f291b2E969fB0849d99D9Ce41e2F137006e"
 
 	MarketOrder OrderType = "MARKET"
 	LimitOrder  OrderType = "LIMIT"
@@ -118,7 +139,7 @@ func NewUser(privateKey string) *User {
 	}
 }
 
-func NewExchange(privateKey string) *Exchange {
+func NewExchange(privateKey string, client *ethclient.Client) *Exchange {
 
 	orderbooks := make(map[Market]*orderbook.Orderbook)
 
@@ -131,6 +152,7 @@ func NewExchange(privateKey string) *Exchange {
 	}
 
 	return &Exchange{
+		client:     client,
 		Users:      make(map[int64]*User),
 		orders:     make(map[int64]int64),
 		orderbook:  orderbooks,
@@ -218,14 +240,20 @@ func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, o *order
 	ob := ex.orderbook[market]
 	ob.PlaceLimitOrder(price, o)
 
-	// uid := ex.orders[o.UserID]
-	user := ex.Users[o.UserID]
+	user, ok := ex.Users[o.UserID]
+
+	if !ok {
+		return fmt.Errorf("user not found: %d", o.UserID)
+	}
 
 	prk := user.PrivateKey
 
-	util.transferEth(client, prk, to, amount)
+	// Convert the string address to common.Address
+	toAddress := common.HexToAddress(to)
 
-	return nil
+	// Call transferEth with the correct types
+	return transferEth(ex.client, prk, toAddress, o.Size())
+
 }
 
 func (ex *Exchange) handleMatches(matches []orderbook.Match) error {
@@ -246,15 +274,16 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 		return err
 	}
 
-	order := orderbook.NewOrder(placemarkerorder.Bid, placemarkerorder.Size, placemarkerorder.userId)
+	fmt.Println(placemarkerorder)
+
+	order := orderbook.NewOrder(placemarkerorder.Bid, placemarkerorder.Size, int64(placemarkerorder.UserId))
 
 	if placemarkerorder.Type == OrderType(LimitOrder) {
+		fmt.Println(order)
 		if err := ex.handlePlaceLimitOrder(Market(placemarkerorder.Market), placemarkerorder.Price, order); err != nil {
 			return err
-
 		}
-		return c.JSON(200, map[string]any{"msg": " limit  order placed"})
-
+		return c.JSON(200, map[string]any{"msg": "limit order placed"})
 	}
 
 	if placemarkerorder.Type == OrderType(MarketOrder) {

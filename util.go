@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func transferEth(client *ethclient.Client, prk *ecdsa.PrivateKey, to common.Address, amount float64) {
+func transferEth(client *ethclient.Client, prk *ecdsa.PrivateKey, to common.Address, amount float64) error {
 
 	publicKey := prk.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
@@ -52,4 +52,6 @@ func transferEth(client *ethclient.Client, prk *ecdsa.PrivateKey, to common.Addr
 	}
 
 	fmt.Printf("tx sent: %s", signedTx.Hash().Hex()) // tx sent
+
+	return nil
 }
