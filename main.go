@@ -29,9 +29,19 @@ func main() {
 	ex := NewExchange("4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d", client)
 
 	privateKey, err := crypto.HexToECDSA("6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1")
+	privateKey2, err2 := crypto.HexToECDSA("e485d098507f54e7733a205420dfddbe58db035fa577fc294ebd14db90767a52")
 
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if err2 != nil {
+		log.Fatal(err2)
+	}
+
+	user2 := &User{
+		Id:         8,
+		PrivateKey: privateKey2,
 	}
 
 	user := &User{
@@ -40,6 +50,7 @@ func main() {
 	}
 
 	ex.Users[user.Id] = user
+	ex.Users[user2.Id] = user2
 
 	fmt.Println(ex.Users)
 
@@ -97,6 +108,7 @@ type (
 	}
 
 	Order struct {
+		UserId    int64
 		ID        int64
 		Price     float64
 		Size      float64
@@ -126,7 +138,7 @@ const (
 	LimitOrder  OrderType = "LIMIT"
 )
 
-func NewUser(privateKey string) *User {
+func NewUser(privateKey string, id int64) *User {
 
 	prk, err := crypto.HexToECDSA(privateKey)
 
@@ -135,6 +147,7 @@ func NewUser(privateKey string) *User {
 	}
 
 	return &User{
+		Id:         id,
 		PrivateKey: prk,
 	}
 }
@@ -258,9 +271,37 @@ func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, o *order
 
 func (ex *Exchange) handleMatches(matches []orderbook.Match) error {
 
-	// for _ , match := range matches {
+	for _, match := range matches {
 
-	// }
+		fromUser, ok := ex.Users[match.Ask.UserID]
+
+		// fromPublicKeyECDSA, ok := fromUser.PrivateKey.Public().(*ecdsa.PublicKey)
+		// fromAddress := crypto.PubkeyToAddress(*fromPublicKeyECDSA)
+
+		if !ok {
+			return fmt.Errorf("user not found : Ask User Id  %d", match.Ask.UserID)
+		}
+
+		toUser, ok := ex.Users[match.Bid.UserID]
+
+		if !ok {
+			return fmt.Errorf("user not found : Bid  User Id  %d", match.Bid.UserID)
+		}
+
+		// Comnvert to private key to address
+		publicKey := toUser.PrivateKey.Public()
+		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+		if !ok {
+			log.Fatal("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
+		}
+
+		amount := match.SizeFilled
+
+		toAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+
+		transferEth(ex.client, fromUser.PrivateKey, toAddress, amount)
+
+	}
 
 	return nil
 
@@ -289,7 +330,13 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 	if placemarkerorder.Type == OrderType(MarketOrder) {
 		matches, matchedOrders := ex.handlePlaceMarketOrder(Market(placemarkerorder.Market), order)
 
-		ex.handleMatches(matches)
+		fmt.Println(matches)
+
+		err := ex.handleMatches(matches)
+
+		if err != nil {
+			return err
+		}
 
 		return c.JSON(200, map[string]any{"matches": matchedOrders})
 	}
@@ -318,6 +365,7 @@ func (ex *Exchange) handleGetBook(c echo.Context) error {
 
 		for _, order := range limit.Orders {
 			o := &Order{
+				UserId:    order.UserID,
 				ID:        order.ID,
 				Price:     limit.Price,
 				Size:      order.Size(),
@@ -333,6 +381,7 @@ func (ex *Exchange) handleGetBook(c echo.Context) error {
 
 		for _, order := range limit.Orders {
 			o := &Order{
+				UserId:    order.UserID,
 				ID:        order.ID,
 				Price:     limit.Price,
 				Size:      order.Size(),
