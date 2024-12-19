@@ -16,8 +16,8 @@ func assert(t *testing.T, a, b any) {
 func TestLimit(t *testing.T) {
 	l := NewLimit(10_000)
 
-	buyorder := NewOrder(true, 100)
-	buyorder1 := NewOrder(true, 200)
+	buyorder := NewOrder(true, 100, 0)
+	buyorder1 := NewOrder(true, 200, 0)
 
 	l.AddOrder(buyorder)
 
@@ -36,7 +36,7 @@ func TestLimit(t *testing.T) {
 func TestPlaceLimitOrder(t *testing.T) {
 	ob := NewOrderbook()
 
-	sellorder := NewOrder(false, 10)
+	sellorder := NewOrder(false, 10, 0)
 
 	ob.PlaceLimitOrder(10, sellorder)
 
@@ -48,9 +48,9 @@ func TestPlaceLimitOrder(t *testing.T) {
 func TestPlaceMarketOrder(t *testing.T) {
 	ob := NewOrderbook()
 
-	sellorder := NewOrder(false, 20)
+	sellorder := NewOrder(false, 20, 0)
 	ob.PlaceLimitOrder(10000, sellorder)
-	buyorder := NewOrder(true, 10)
+	buyorder := NewOrder(true, 10, 0)
 
 	// ob.PlaceMarketOrder(sellorder)
 	// ob.PlaceMarketOrder(buyorder)

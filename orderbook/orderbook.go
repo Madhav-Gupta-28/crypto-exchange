@@ -7,22 +7,45 @@ import (
 	"time"
 )
 
-type Match struct {
-	Ask        *Order
-	Bid        *Order
-	SizeFilled float64
-	Prize      float64
-}
+type (
+	Match struct {
+		Ask        *Order
+		Bid        *Order
+		SizeFilled float64
+		Prize      float64
+	}
 
-type Order struct {
-	ID        int64
-	size      float64
-	Bid       bool
-	Limit     *Limit
-	Timestamp int64
-}
+	Order struct {
+		UserID    int64
+		ID        int64
+		size      float64
+		Bid       bool
+		Limit     *Limit
+		Timestamp int64
+	}
 
-type Orders []*Order
+	Orders []*Order
+
+	Limit struct {
+		Price       float64
+		Orders      Orders
+		TotalVolume float64
+	}
+
+	Limits []*Limit
+
+	ByBestAsk struct{ Limits }
+
+	Orderbook struct {
+		ask  []*Limit
+		bids []*Limit
+
+		AskLimits map[float64]*Limit
+		BidLimits map[float64]*Limit
+
+		orders map[int64]*Order
+	}
+)
 
 func (o Orders) Len() int           { return len(o) }
 func (o Orders) Swap(i, j int)      { o[i], o[j] = o[j], o[i] }
@@ -32,8 +55,9 @@ func (o *Order) String() string {
 	return fmt.Sprintf("size : [%.2f]", o.size)
 }
 
-func NewOrder(bid bool, size float64) *Order {
+func NewOrder(bid bool, size float64, userID int64) *Order {
 	return &Order{
+		UserID:    userID,
 		ID:        int64(rand.Intn(100000)),
 		size:      size,
 		Bid:       bid,
@@ -41,17 +65,7 @@ func NewOrder(bid bool, size float64) *Order {
 	}
 }
 
-type Limit struct {
-	Price       float64
-	Orders      Orders
-	TotalVolume float64
-}
-
-type Limits []*Limit
-
-// For ask
-type ByBestAsk struct{ Limits }
-
+// For asks
 func (a ByBestAsk) Len() int           { return len(a.Limits) }
 func (a ByBestAsk) Swap(i, j int)      { a.Limits[i], a.Limits[j] = a.Limits[j], a.Limits[i] }
 func (a ByBestAsk) Less(i, j int) bool { return a.Limits[i].Price < a.Limits[j].Price }
@@ -166,16 +180,6 @@ func (l *Limit) Fill(o *Order) []Match {
 
 	return matches
 
-}
-
-type Orderbook struct {
-	ask  []*Limit
-	bids []*Limit
-
-	AskLimits map[float64]*Limit
-	BidLimits map[float64]*Limit
-
-	orders map[int64]*Order
 }
 
 func NewOrderbook() *Orderbook {
