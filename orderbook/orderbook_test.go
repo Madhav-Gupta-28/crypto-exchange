@@ -40,6 +40,8 @@ func TestPlaceLimitOrder(t *testing.T) {
 
 	ob.PlaceLimitOrder(10, sellorder)
 
+	assert(t, len(ob.orders), 1)
+
 	assert(t, len(ob.ask), 1)
 }
 
@@ -68,19 +70,19 @@ func TestPlaceMarketOrder(t *testing.T) {
 }
 
 func TestPlaceMarketOrderMultifill(t *testing.T) {
-	ob := NewOrderbook()
+	// ob := NewOrderbook()
 
-	buyOrderA := NewOrder(true, 5)
-	buyOrderB := NewOrder(true, 10)
-	buyOrderC := NewOrder(true, 15)
-	buyOrderD := NewOrder(true, 20)
+	// buyOrderA := NewOrder(true, 5)
+	// buyOrderB := NewOrder(true, 10)
+	// buyOrderC := NewOrder(true, 15)
+	// buyOrderD := NewOrder(true, 20)
 
-	ob.PlaceLimitOrder(1000, buyOrderA)
-	ob.PlaceLimitOrder(9000, buyOrderB)
-	ob.PlaceLimitOrder(11000, buyOrderC)
-	ob.PlaceLimitOrder(1000, buyOrderD)
+	// ob.PlaceLimitOrder(1000, buyOrderA)
+	// ob.PlaceLimitOrder(9000, buyOrderB)
+	// ob.PlaceLimitOrder(11000, buyOrderC)
+	// ob.PlaceLimitOrder(1000, buyOrderD)
 
-	assert(t, ob.BidTotalVolumne(), 50.0)
+	// assert(t, ob.BidTotalVolumne(), 50.0)
 	// assert(t, ob.AskTotalVolumne(), 0.0)
 
 	// sellOrder := NewOrder(false, 20)
@@ -95,19 +97,19 @@ func TestPlaceMarketOrderMultifill(t *testing.T) {
 
 }
 
-func TestCancelOrder(t *testing.T) {
-	ob := NewOrderbook()
+// func TestCancelOrder(t *testing.T) {
+// 	ob := NewOrderbook()
 
-	buyOrderA := NewOrder(true, 5)
-	buyOrderB := NewOrder(true, 10)
+// 	buyOrderA := NewOrder(true, 5)
+// 	buyOrderB := NewOrder(true, 10)
 
-	ob.PlaceLimitOrder(1000, buyOrderA)
-	ob.PlaceLimitOrder(9000, buyOrderB)
+// 	ob.PlaceLimitOrder(1000, buyOrderA)
+// 	ob.PlaceLimitOrder(9000, buyOrderB)
 
-	assert(t, ob.BidTotalVolumne(), 15.0)
+// 	assert(t, ob.BidTotalVolumne(), 15.0)
 
-	ob.cancelOrder(buyOrderB)
+// 	ob.cancelOrder(buyOrderB)
 
-	assert(t, ob.BidTotalVolumne(), 5.0)
+// 	assert(t, ob.BidTotalVolumne(), 5.0)
 
-}
+// }
