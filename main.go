@@ -253,19 +253,21 @@ func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, o *order
 	ob := ex.orderbook[market]
 	ob.PlaceLimitOrder(price, o)
 
-	user, ok := ex.Users[o.UserID]
+	// user, ok := ex.Users[o.UserID]
 
-	if !ok {
-		return fmt.Errorf("user not found: %d", o.UserID)
-	}
+	// if !ok {
+	// 	return fmt.Errorf("user not found: %d", o.UserID)
+	// }
 
-	prk := user.PrivateKey
+	// prk := user.PrivateKey
 
-	// Convert the string address to common.Address
-	toAddress := common.HexToAddress(to)
+	// // Convert the string address to common.Address
+	// toAddress := common.HexToAddress(to)
 
-	// Call transferEth with the correct types
-	return transferEth(ex.client, prk, toAddress, o.Size())
+	// // Call transferEth with the correct types
+	// return transferEth(ex.client, prk, toAddress, o.Size())
+
+	return nil
 
 }
 
@@ -274,10 +276,6 @@ func (ex *Exchange) handleMatches(matches []orderbook.Match) error {
 	for _, match := range matches {
 
 		fromUser, ok := ex.Users[match.Ask.UserID]
-
-		// fromPublicKeyECDSA, ok := fromUser.PrivateKey.Public().(*ecdsa.PublicKey)
-		// fromAddress := crypto.PubkeyToAddress(*fromPublicKeyECDSA)
-
 		if !ok {
 			return fmt.Errorf("user not found : Ask User Id  %d", match.Ask.UserID)
 		}
