@@ -31,7 +31,12 @@ type PlaceOrderRequest struct {
 	Type   server.OrderType
 }
 
-func (c *Client) ClientPlaceLimitOrder(params *PlaceOrderRequest) error {
+type CancelOrderRequest struct {
+	OrderID int64
+	Market  server.Market
+}
+
+func (c *Client) ClientPlaceLimitOrder(params *PlaceOrderRequest) (*server.PlaceOrderResponse, error) {
 
 	e := Endpoint + "place-order"
 
@@ -47,19 +52,60 @@ func (c *Client) ClientPlaceLimitOrder(params *PlaceOrderRequest) error {
 	body, err := json.Marshal(param)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	req, err := http.NewRequest(http.MethodPost, e, bytes.NewReader(body))
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Add content type header
 	req.Header.Set("Content-Type", "application/json")
 
 	// Executing the Requesr
+	res, err := c.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	placeorderresponse := &server.PlaceOrderResponse{}
+
+	if err := json.NewDecoder(res.Body).Decode(placeorderresponse); err != nil {
+		return nil, err
+	}
+
+	return placeorderresponse, nil
+
+}
+
+func (c *Client) ClientCancelOrder(params *CancelOrderRequest) error {
+
+	e := Endpoint + "cancel-order"
+
+	param := &server.CancelOrderRequest{
+		OrderID: params.OrderID,
+		Market:  params.Market,
+	}
+
+	body, err := json.Marshal(param)
+
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, e, bytes.NewReader(body))
+
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
 	res, err := c.Do(req)
 
 	if err != nil {
@@ -75,6 +121,7 @@ func (c *Client) ClientPlaceLimitOrder(params *PlaceOrderRequest) error {
 	}
 
 	fmt.Printf("Order Status: %s\n", result["msg"])
+
 	return nil
 
 }

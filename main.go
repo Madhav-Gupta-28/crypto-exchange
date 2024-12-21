@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Madhav-Gupta-28/crypto-exchange/client"
@@ -23,7 +24,20 @@ func main() {
 
 	go func() {
 		for {
-			client.NewClient().ClientPlaceLimitOrder(bidp)
+			response, err := client.NewClient().ClientPlaceLimitOrder(bidp)
+
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			fmt.Println(response)
+
+			time.Sleep(5 * time.Second)
+
+			client.NewClient().ClientCancelOrder(&client.CancelOrderRequest{
+				OrderID: response.OrderID,
+				Market:  "ETH",
+			})
 
 			time.Sleep(2 * time.Second)
 

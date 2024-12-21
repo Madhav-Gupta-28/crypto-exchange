@@ -129,6 +129,10 @@ type (
 		Id         int64
 		PrivateKey *ecdsa.PrivateKey
 	}
+
+	PlaceOrderResponse struct {
+		OrderID int64
+	}
 )
 
 // const decleration
@@ -217,6 +221,7 @@ func (ex *Exchange) cancelOrder(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{"msg": "order cancelled"})
 	}
 
+	fmt.Println("order cancelled")
 	return nil
 
 }
@@ -233,6 +238,9 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, o *orderbook.Order) ([
 		isBid = true
 	}
 
+	totalSizeFilled := 0.0
+	sumprice := 0.0
+
 	for i := 0; i < len(matchedOrders); i++ {
 		var matchedID int64
 		if isBid {
@@ -246,7 +254,15 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, o *orderbook.Order) ([
 			Price: matches[i].Prize,
 			ID:    matchedID,
 		}
+
+		totalSizeFilled += matches[i].SizeFilled
+		sumprice += matches[i].Prize
 	}
+
+	avgPrice := sumprice / float64(len(matches))
+
+	fmt.Println("total size filled , sumprice ,avgprice", totalSizeFilled, sumprice, avgPrice)
+
 	return matches, matchedOrders
 }
 
@@ -300,23 +316,19 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 	if err := json.NewDecoder(c.Request().Body).Decode(&placemarkerorder); err != nil {
 		return err
 	}
-
-	fmt.Println(placemarkerorder)
-
 	order := orderbook.NewOrder(placemarkerorder.Bid, placemarkerorder.Size, int64(placemarkerorder.UserId))
 
-	if placemarkerorder.Type == OrderType(LimitOrder) {
+	// limit order
+	if placemarkerorder.Type == LimitOrder {
 		fmt.Println(order)
 		if err := ex.handlePlaceLimitOrder(Market(placemarkerorder.Market), placemarkerorder.Price, order); err != nil {
 			return err
 		}
-		return c.JSON(200, map[string]any{"msg": "limit order placed"})
 	}
 
+	// market order
 	if placemarkerorder.Type == OrderType(MarketOrder) {
-		matches, matchedOrders := ex.handlePlaceMarketOrder(Market(placemarkerorder.Market), order)
-
-		fmt.Println(matches)
+		matches, _ := ex.handlePlaceMarketOrder(Market(placemarkerorder.Market), order)
 
 		err := ex.handleMatches(matches)
 
@@ -324,10 +336,13 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 			return err
 		}
 
-		return c.JSON(200, map[string]any{"matches": matchedOrders})
 	}
 
-	return nil
+	response := PlaceOrderResponse{
+		OrderID: order.ID,
+	}
+
+	return c.JSON(200, response)
 
 }
 
