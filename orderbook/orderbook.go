@@ -210,7 +210,7 @@ func (ob *Orderbook) PlaceMarketOrder(o *Order) []Match {
 			matches = append(matches, limitmatches...)
 
 			if len(limit.Orders) == 0 {
-				ob.clearLimit(true, limit)
+				ob.clearLimit(false, limit)
 			}
 
 		}
@@ -226,7 +226,7 @@ func (ob *Orderbook) PlaceMarketOrder(o *Order) []Match {
 			matches = append(matches, limitmatches...)
 
 			if len(limit.Orders) == 0 {
-				ob.clearLimit(false, limit)
+				ob.clearLimit(true, limit)
 			}
 
 		}

@@ -62,11 +62,19 @@ func StartServer() {
 
 	fmt.Println(balance)
 
-	e.GET("/book", ex.handleGetBook)
+	e.GET("/book/:market", ex.handleGetBook)
 
 	e.DELETE("/cancel-order", ex.cancelOrder)
 
 	e.POST("/place-order", ex.handlePlaceOrder)
+
+	e.GET("/book/:market/best-bid", ex.handleGetBestBid)
+
+	e.GET("/book/:market/best-ask", ex.handleGetBestAsk)
+
+	e.GET("/book/:market/ask", ex.handleGetAskBook)
+
+	e.GET("/book/:market/bid", ex.handleGetBidBook)
 
 	e.Start(":3000")
 
@@ -132,6 +140,10 @@ type (
 
 	PlaceOrderResponse struct {
 		OrderID int64
+	}
+
+	PriceResponse struct {
+		Price float64
 	}
 )
 
@@ -347,7 +359,7 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 }
 
 func (ex *Exchange) handleGetBook(c echo.Context) error {
-	market := c.QueryParam("market")
+	market := c.Param("market")
 
 	ob, ok := ex.orderbook[Market(market)]
 
@@ -438,4 +450,64 @@ func transferEth(client *ethclient.Client, prk *ecdsa.PrivateKey, to common.Addr
 	fmt.Printf("tx sent: %s", signedTx.Hash().Hex()) // tx sent
 
 	return nil
+}
+
+func (ex *Exchange) handleGetBestBid(c echo.Context) error {
+
+	market := c.Param("market")
+
+	ob := ex.orderbook[Market(market)]
+
+	if len(ob.Bids()) == 0 {
+		return fmt.Errorf("no beds found ")
+	}
+
+	bestBidPrice := ob.Bids()[0].Price
+
+	response := PriceResponse{
+		Price: bestBidPrice,
+	}
+
+	return c.JSON(http.StatusOK, response)
+
+}
+
+func (ex *Exchange) handleGetBestAsk(c echo.Context) error {
+
+	market := c.Param("market")
+
+	ob := ex.orderbook[Market(market)]
+
+	if len(ob.Asks()) == 0 {
+		return fmt.Errorf("no asks found")
+	}
+
+	bestAskPrice := ob.Asks()[0].Price
+
+	response := PriceResponse{
+		Price: bestAskPrice,
+	}
+
+	return c.JSON(http.StatusOK, response)
+
+}
+
+func (ex *Exchange) handleGetAskBook(c echo.Context) error {
+
+	market := c.Param("market")
+
+	ob := ex.orderbook[Market(market)]
+
+	return c.JSON(http.StatusOK, ob.Asks())
+
+}
+
+func (ex *Exchange) handleGetBidBook(c echo.Context) error {
+
+	market := c.Param("market")
+
+	ob := ex.orderbook[Market(market)]
+
+	return c.JSON(http.StatusOK, ob.Bids())
+
 }

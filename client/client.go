@@ -36,6 +36,10 @@ type CancelOrderRequest struct {
 	Market  server.Market
 }
 
+type GetBookRequest struct {
+	Market server.Market
+}
+
 func (c *Client) ClientPlaceLimitOrder(params *PlaceOrderRequest) (*server.PlaceOrderResponse, error) {
 
 	e := Endpoint + "place-order"
@@ -123,5 +127,61 @@ func (c *Client) ClientCancelOrder(params *CancelOrderRequest) error {
 	fmt.Printf("Order Status: %s\n", result["msg"])
 
 	return nil
+
+}
+
+func (c *Client) ClientGetBestBid(params *GetBookRequest) (float64, error) {
+
+	e := Endpoint + "book/" + string(params.Market) + "/best-bid"
+
+	req, err := http.NewRequest(http.MethodGet, e, nil)
+
+	if err != nil {
+		return 0, err
+	}
+
+	res, err := c.Do(req)
+
+	if err != nil {
+		return 0, err
+	}
+
+	defer res.Body.Close()
+
+	bestBidResponse := &server.PriceResponse{}
+
+	if err := json.NewDecoder(res.Body).Decode(bestBidResponse); err != nil {
+		return 0, err
+	}
+
+	return bestBidResponse.Price, nil
+
+}
+
+func (c *Client) ClientGetBestAsk(params *GetBookRequest) (float64, error) {
+
+	e := Endpoint + "book/" + string(params.Market) + "/best-ask"
+
+	req, err := http.NewRequest(http.MethodGet, e, nil)
+
+	if err != nil {
+		return 0, err
+	}
+
+	res, err := c.Do(req)
+
+	if err != nil {
+		return 0, err
+	}
+
+	defer res.Body.Close()
+
+	bestBidResponse := &server.PriceResponse{}
+
+	if err := json.NewDecoder(res.Body).Decode(bestBidResponse); err != nil {
+		return 0, err
+	}
+
+	return bestBidResponse.Price, nil
 
 }

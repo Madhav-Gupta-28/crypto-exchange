@@ -22,15 +22,31 @@ func main() {
 		Type:   server.LimitOrder,
 	}
 
+	// askpLimit := &client.PlaceOrderRequest{
+	// 	UserId: 8,
+	// 	Size:   7,
+	// 	Price:  10000,
+	// 	Bid:    false,
+	// 	Type:   server.LimitOrder,
+	// }
+
 	go func() {
 		for {
 			response, err := client.NewClient().ClientPlaceLimitOrder(bidp)
 
 			if err != nil {
 				fmt.Println(err)
+				continue
 			}
 
+			// response2, err2 := client.NewClient().ClientPlaceLimitOrder(askpLimit)
+			// if err2 != nil {
+			// 	fmt.Println(err2)
+			// 	continue
+			// }
+
 			fmt.Println(response)
+			// fmt.Println(response2)
 
 			time.Sleep(5 * time.Second)
 
@@ -38,6 +54,17 @@ func main() {
 				OrderID: response.OrderID,
 				Market:  "ETH",
 			})
+
+			bestBid, err := client.NewClient().ClientGetBestAsk(&client.GetBookRequest{
+				Market: "ETH",
+			})
+
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Println("Best ask", bestBid)
 
 			time.Sleep(2 * time.Second)
 
