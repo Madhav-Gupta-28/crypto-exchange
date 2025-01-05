@@ -10,8 +10,8 @@ import (
 func TestLimit(t *testing.T) {
 	l := NewLimit(10_000)
 
-	ordera := NewOrder(true, 10_000, l)
-	orderb := NewOrder(true, 10_000, l)
+	ordera := NewOrder(true, 10_000)
+	orderb := NewOrder(true, 10_000)
 
 	l.AddOrder(ordera)
 	l.AddOrder(orderb)
@@ -28,13 +28,61 @@ func TestOrderbook(t *testing.T) {
 
 	ob := NewOrderbook()
 
-	buyorder := NewOrder(true, 10_000, nil)
-	askorder := NewOrder(false, 10_000, nil)
+	buyorder := NewOrder(true, 10_000)
+	askorder := NewOrder(false, 10_000)
 
-	ob.PlaceOrder(10_000, buyorder)
-	ob.PlaceOrder(10_000, askorder)
+	ob.PlaceLimitOrder(10_000, buyorder)
+	ob.PlaceLimitOrder(10_000, askorder)
+}
 
-	fmt.Println(ob.Asks[0])
+func TestPlaceLimitOrder(t *testing.T) {
+	ob := NewOrderbook()
 
-	// ob.PlaceMarketOrder(true, 10_000)
+	buyorder := NewOrder(true, 10_000)
+	askorder := NewOrder(false, 10_000)
+
+	ob.PlaceLimitOrder(10_000, buyorder)
+	ob.PlaceLimitOrder(10_000, askorder)
+
+	assert.Equal(t, len(ob.bids), 1)
+	assert.Equal(t, len(ob.asks), 1)
+
+}
+
+func TestPlaceMarketOrder(t *testing.T) {
+	ob := NewOrderbook()
+
+	sellorder := NewOrder(false, 20)
+	ob.PlaceLimitOrder(10_000, sellorder)
+
+	buyorder := NewOrder(true, 20)
+	matches := ob.PlaceMarketOrder(buyorder)
+
+	assert.Equal(t, len(matches), 1)
+	assert.Equal(t, matches[0].SizeFilled, 20.0)
+	assert.Equal(t, matches[0].Price, 10_000.0)
+
+	fmt.Println(matches)
+}
+
+func TestPlaceMarketOrderMultiFill(t *testing.T) {
+	ob := NewOrderbook()
+
+	buyorderA := NewOrder(true, 20)
+	buyorderB := NewOrder(true, 20)
+	buyorderC := NewOrder(true, 20)
+	buyorderD := NewOrder(true, 1)
+
+	ob.PlaceLimitOrder(10_000, buyorderA)
+	ob.PlaceLimitOrder(10_000, buyorderD)
+	ob.PlaceLimitOrder(9_000, buyorderB)
+	ob.PlaceLimitOrder(5_000, buyorderC)
+
+	assert.Equal(t, ob.BidTotalVolumne(), 61.0)
+
+	// sellorderA := NewOrder(false, 20)
+	// matches := ob.PlaceMarketOrder(sellorderA)
+
+	// assert.Equal(t, len(matches), 3)
+
 }
