@@ -1,7 +1,9 @@
-package main
+package orderbook
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"sort"
 	"time"
 )
@@ -14,6 +16,7 @@ type Match struct {
 }
 
 type Order struct {
+	Id        int64
 	Size      float64
 	Bid       bool
 	Limit     *Limit
@@ -99,7 +102,9 @@ func NewLimit(price float64) *Limit {
 
 // NewOrder creates a new order
 func NewOrder(bid bool, size float64) *Order {
+	id, _ := rand.Int(rand.Reader, big.NewInt(1000000000000000000))
 	return &Order{
+		Id:        id.Int64(),
 		Size:      size,
 		Bid:       bid,
 		TimeStamp: time.Now().UnixNano(),
