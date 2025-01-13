@@ -10,8 +10,8 @@ import (
 func TestLimit(t *testing.T) {
 	l := NewLimit(10_000)
 
-	ordera := NewOrder(true, 10_000)
-	orderb := NewOrder(true, 10_000)
+	ordera := NewOrder(true, 10_000, 1)
+	orderb := NewOrder(true, 10_000, 1)
 
 	l.AddOrder(ordera)
 	l.AddOrder(orderb)
@@ -28,8 +28,8 @@ func TestOrderbook(t *testing.T) {
 
 	ob := NewOrderbook()
 
-	buyorder := NewOrder(true, 10_000)
-	askorder := NewOrder(false, 10_000)
+	buyorder := NewOrder(true, 10_000, 1)
+	askorder := NewOrder(false, 10_000, 1)
 
 	ob.PlaceLimitOrder(10_000, buyorder)
 	ob.PlaceLimitOrder(10_000, askorder)
@@ -38,8 +38,8 @@ func TestOrderbook(t *testing.T) {
 func TestPlaceLimitOrder(t *testing.T) {
 	ob := NewOrderbook()
 
-	buyorder := NewOrder(true, 10_000)
-	askorder := NewOrder(false, 10_000)
+	buyorder := NewOrder(true, 10_000, 1)
+	askorder := NewOrder(false, 10_000, 1)
 
 	ob.PlaceLimitOrder(10_000, buyorder)
 	ob.PlaceLimitOrder(10_000, askorder)
@@ -52,10 +52,10 @@ func TestPlaceLimitOrder(t *testing.T) {
 func TestPlaceMarketOrder(t *testing.T) {
 	ob := NewOrderbook()
 
-	sellorder := NewOrder(false, 20)
+	sellorder := NewOrder(false, 20, 1)
 	ob.PlaceLimitOrder(10_000, sellorder)
 
-	buyorder := NewOrder(true, 20)
+	buyorder := NewOrder(true, 20, 1)
 	matches := ob.PlaceMarketOrder(buyorder)
 
 	assert.Equal(t, len(matches), 1)
@@ -68,10 +68,10 @@ func TestPlaceMarketOrder(t *testing.T) {
 func TestPlaceMarketOrderMultiFill(t *testing.T) {
 	ob := NewOrderbook()
 
-	buyorderA := NewOrder(true, 20)
-	buyorderB := NewOrder(true, 20)
-	buyorderC := NewOrder(true, 20)
-	buyorderD := NewOrder(true, 1)
+	buyorderA := NewOrder(true, 20, 1)
+	buyorderB := NewOrder(true, 20, 1)
+	buyorderC := NewOrder(true, 20, 1)
+	buyorderD := NewOrder(true, 1, 1)
 
 	ob.PlaceLimitOrder(10_000, buyorderA)
 	ob.PlaceLimitOrder(10_000, buyorderD)

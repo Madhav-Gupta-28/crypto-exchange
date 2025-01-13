@@ -17,6 +17,7 @@ type Match struct {
 
 type Order struct {
 	Id        int64
+	UserId    int64
 	Size      float64
 	Bid       bool
 	Limit     *Limit
@@ -41,6 +42,7 @@ type Orderbook struct {
 
 	AskLimits map[float64]*Limit
 	BidLimits map[float64]*Limit
+	Orders    map[int64]*Order
 }
 
 type Limits []*Limit
@@ -67,6 +69,7 @@ func NewOrderbook() *Orderbook {
 		bids:      []*Limit{},
 		AskLimits: make(map[float64]*Limit),
 		BidLimits: make(map[float64]*Limit),
+		Orders:    make(map[int64]*Order),
 	}
 }
 
@@ -101,10 +104,11 @@ func NewLimit(price float64) *Limit {
 }
 
 // NewOrder creates a new order
-func NewOrder(bid bool, size float64) *Order {
+func NewOrder(bid bool, size float64, userid int64) *Order {
 	id, _ := rand.Int(rand.Reader, big.NewInt(1000000000000000000))
 	return &Order{
 		Id:        id.Int64(),
+		UserId:    userid,
 		Size:      size,
 		Bid:       bid,
 		TimeStamp: time.Now().UnixNano(),
@@ -205,6 +209,7 @@ func (l *Limit) Fill(o *Order) []Match {
 func (ob *Orderbook) CancelOrder(o *Order) {
 	limit := o.Limit
 	limit.DeleteOrder(o)
+	delete(ob.Orders, o.Id)
 }
 
 func (ob *Orderbook) PlaceMarketOrder(o *Order) []Match {
@@ -260,6 +265,7 @@ func (ob *Orderbook) PlaceLimitOrder(price float64, o *Order) {
 		}
 	}
 	limit.AddOrder(o)
+	ob.Orders[o.Id] = o
 }
 
 // Asks returns the asks in the orderbook
