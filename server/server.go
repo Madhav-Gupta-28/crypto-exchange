@@ -80,6 +80,10 @@ type (
 		Id         int64
 		PrivateKey *ecdsa.PrivateKey
 	}
+
+	PlaceOrderResponse struct {
+		OrderId int64
+	}
 )
 
 func StartServer() {
@@ -195,6 +199,9 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 	if order.Bid {
 		isBid = true
 	}
+
+	totalFilled := 0.0
+	sumPrice := 0.0
 	for i := 0; i < len(matches); i++ {
 		id := matches[i].Bid.Id
 		if !isBid {
@@ -205,7 +212,13 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 			Size:  matches[i].SizeFilled,
 			Id:    id,
 		}
+		totalFilled += matches[i].SizeFilled
+		sumPrice += matches[i].Price * matches[i].SizeFilled
 	}
+
+	avgPrice := sumPrice / float64(len(matches))
+
+	fmt.Printf("Average Price: %.2f\n", avgPrice)
 
 	return matches, matchedOrders
 }
@@ -272,25 +285,29 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 	market := Market(placeorderdata.Market)
 	order := orderbook.NewOrder(placeorderdata.Bid, placeorderdata.Size, placeorderdata.UserId)
 
+	// LIMIT ORDER
 	if placeorderdata.Type == LIMITORDER {
 		err := ex.handlePlaceLimitOrder(market, placeorderdata.Price, order)
 
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
-		return c.JSON(http.StatusOK, map[string]string{"message": "Limit Order placed"})
 	}
+
+	// MARKET ORDER
 	if placeorderdata.Type == MARKETORDER {
-		matches, matchedOrders := ex.handlePlaceMarketOrder(market, order)
+		matches, _ := ex.handlePlaceMarketOrder(market, order)
 
 		err := ex.handleMatches(matches)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
-		return c.JSON(http.StatusOK, map[string]any{"message": "Market Order placed", "matchedOrders": matchedOrders, "matches": matches})
 	}
 
-	return nil
+	resp := &PlaceOrderResponse{
+		OrderId: order.Id,
+	}
+	return c.JSON(http.StatusOK, resp)
 }
 
 func (ex *Exchange) handleCancelOrder(c echo.Context) error {

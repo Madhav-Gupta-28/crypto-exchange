@@ -13,17 +13,28 @@ func main() {
 
 	time.Sleep(1 * time.Second)
 
-	client := client.NewClient()
+	c := client.NewClient()
 
 	params := &client.PlaceLimitOrderParams{
 		UserId: 69,
 		Size:   1,
 		Price:  100,
 		Bid:    false,
-		Market: "ETH",
-		Type:   "LIMIT",
 	}
 
-	client.PlaceLimitOrder(params)
+	c.PlaceLimitOrder(params)
+
+	time.Sleep(15 * time.Second)
+
+	params = &client.PlaceLimitOrderParams{
+		UserId: 79,
+		Size:   1,
+		Price:  100,
+		Bid:    true,
+	}
+
+	c.PlaceMarketOrder(params)
+
+	select {}
 
 }
