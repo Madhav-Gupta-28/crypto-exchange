@@ -95,6 +95,8 @@ func (ob *Orderbook) ClearLimit(bid bool, l *Limit) {
 		}
 	}
 
+	fmt.Println("Clearing limit %v", l.Price)
+
 }
 
 // NewLimitOrder creates a new limit order
@@ -226,7 +228,7 @@ func (ob *Orderbook) PlaceMarketOrder(o *Order) []Match {
 			matches = append(matches, limitmatches...)
 
 			if len(limit.Orders) == 0 {
-				ob.ClearLimit(true, limit)
+				ob.ClearLimit(false, limit)
 			}
 		}
 	} else {
@@ -238,7 +240,7 @@ func (ob *Orderbook) PlaceMarketOrder(o *Order) []Match {
 			matches = append(matches, limitmatches...)
 
 			if len(limit.Orders) == 0 {
-				ob.ClearLimit(false, limit)
+				ob.ClearLimit(true, limit)
 			}
 		}
 	}

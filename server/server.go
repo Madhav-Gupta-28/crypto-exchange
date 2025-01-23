@@ -84,6 +84,10 @@ type (
 	PlaceOrderResponse struct {
 		OrderId int64
 	}
+
+	BestBidResponse struct {
+		Price float64
+	}
 )
 
 func StartServer() {
@@ -110,13 +114,13 @@ func StartServer() {
 	}
 
 	user1 := &User{
-		Id:         69,
+		Id:         1,
 		PrivateKey: pv1,
 	}
 	ex.Users[user1.Id] = user1
 
 	user2 := &User{
-		Id:         79,
+		Id:         2,
 		PrivateKey: pv2,
 	}
 	ex.Users[user2.Id] = user2
@@ -142,7 +146,10 @@ func StartServer() {
 
 	e.POST("/order", ex.handlePlaceOrder)
 	e.GET("/book/:market", ex.handleGetOrderbook)
+	e.GET("/book", ex.handleGetBook)
 	e.DELETE("/order/:orderID", ex.handleCancelOrder)
+	e.GET("/book/:market/bid", ex.handleGetBestBid)
+	e.GET("/book/:market/ask", ex.handleGetBestAsk)
 
 	// // Getting rhe balance of the account
 	// account := common.HexToAddress("0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
@@ -363,6 +370,44 @@ func (ex *Exchange) handleGetOrderbook(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, orderbookData)
 
+}
+
+func (ex *Exchange) handleGetBestBid(c echo.Context) error {
+	market := Market(c.Param("market"))
+	ob, ok := ex.orderbooks[market]
+	if !ok {
+		return c.JSON(http.StatusNotFound, map[string]any{"message": "Orderbook of This Market not found"})
+	}
+
+	if len(ob.Bids()) == 0 {
+		return c.JSON(http.StatusOK, map[string]any{"message": "No bids found"})
+	}
+	bestBidPrice := ob.Bids()[0].Price
+	resp := BestBidResponse{
+		Price: bestBidPrice,
+	}
+	return c.JSON(http.StatusOK, resp)
+}
+
+func (ex *Exchange) handleGetBestAsk(c echo.Context) error {
+	market := Market(c.Param("market"))
+	ob, ok := ex.orderbooks[market]
+	if !ok {
+		return c.JSON(http.StatusNotFound, map[string]any{"message": "Orderbook of This Market not found"})
+	}
+
+	if len(ob.Asks()) == 0 {
+		return c.JSON(http.StatusOK, map[string]any{"message": "No bids found"})
+	}
+	bestBidPrice := ob.Asks()[0].Price
+	resp := BestBidResponse{
+		Price: bestBidPrice,
+	}
+	return c.JSON(http.StatusOK, resp)
+}
+
+func (ex *Exchange) handleGetBook(c echo.Context) error {
+	return c.JSON(http.StatusOK, ex.orderbooks)
 }
 
 // Convert ETH to Wei

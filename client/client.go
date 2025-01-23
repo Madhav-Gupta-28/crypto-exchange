@@ -115,3 +115,39 @@ func (c *Client) CancelOrder(orderId int) error {
 	fmt.Printf("%v", resp)
 	return nil
 }
+
+func (c *Client) GetBestBidPrice(market server.Market) (float64, error) {
+	e := ENDPOINT + "/book/" + string(market) + "/bid"
+	req, err := http.NewRequest(http.MethodGet, e, nil)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	bestBidResponse := &server.BestBidResponse{}
+	err = json.NewDecoder(resp.Body).Decode(bestBidResponse)
+	if err != nil {
+		return 0, err
+	}
+	return bestBidResponse.Price, nil
+}
+
+func (c *Client) GetBestAskPrice(market server.Market) (float64, error) {
+	e := ENDPOINT + "/book/" + string(market) + "/ask"
+	req, err := http.NewRequest(http.MethodGet, e, nil)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	bestAskResponse := &server.BestBidResponse{}
+	err = json.NewDecoder(resp.Body).Decode(bestAskResponse)
+	if err != nil {
+		return 0, err
+	}
+	return bestAskResponse.Price, nil
+}
