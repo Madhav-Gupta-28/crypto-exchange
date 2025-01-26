@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/Madhav-Gupta-28/crypto-exchange/orderbook"
 	"github.com/ethereum/go-ethereum/common"
@@ -35,6 +36,7 @@ type (
 	Exchange struct {
 		client *ethclient.Client
 		Users  map[int64]*User
+		mu     sync.RWMutex
 
 		// orders maps a user to it's orders
 		Orders     map[int64][]*orderbook.Order
@@ -90,6 +92,11 @@ type (
 
 	BestBidResponse struct {
 		Price float64
+	}
+
+	OrdersByUserIdResponse struct {
+		Asks []*orderbook.Order
+		Bids []*orderbook.Order
 	}
 )
 
@@ -236,6 +243,22 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 
 	fmt.Printf("Average Price: %.2f\n", avgPrice)
 
+	newOrdermap := make(map[int64][]*orderbook.Order)
+
+	ex.mu.Lock()
+
+	for userid, Orderbookorders := range ex.Orders {
+		for i := 0; i < len(Orderbookorders); i++ {
+			if !Orderbookorders[i].IsFilled() {
+				newOrdermap[userid] = append(newOrdermap[userid], Orderbookorders[i])
+			}
+		}
+
+	}
+
+	ex.Orders = newOrdermap
+	ex.mu.Unlock()
+
 	return matches, matchedOrders
 }
 
@@ -288,7 +311,9 @@ func (ex *Exchange) handleMatches(matches []orderbook.Match) error {
 func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, order *orderbook.Order) error {
 	ob := ex.orderbooks[market]
 	ob.PlaceLimitOrder(price, order)
+	ex.mu.Lock()
 	ex.Orders[order.UserId] = append(ex.Orders[order.UserId], order)
+	ex.mu.Unlock()
 	fmt.Printf("new Limit Order Placed [ %.2f] | size [%.2f]", order.Limit.Price, order.Size)
 	return nil
 }
@@ -313,30 +338,13 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 
 	// MARKET ORDER
 	if placeorderdata.Type == MARKETORDER {
-		matches, matchedOrders := ex.handlePlaceMarketOrder(market, order)
+		matches, _ := ex.handlePlaceMarketOrder(market, order)
 
 		err := ex.handleMatches(matches)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, err.Error())
 		}
 
-		// Delete the matched order from the orderbook when the order is filled
-		for _, matchedOrder := range matchedOrders {
-
-			userOrders := ex.Orders[placeorderdata.UserId]
-
-			for i, order := range userOrders {
-				if matchedOrder.UserId == order.UserId {
-					if order.IsFilled() {
-						if order.Id == matchedOrder.Id {
-							userOrders[i] = userOrders[len(userOrders)-1]
-							userOrders = userOrders[:len(userOrders)-1]
-						}
-					}
-				}
-			}
-			ex.Orders[placeorderdata.UserId] = userOrders
-		}
 	}
 
 	resp := &PlaceOrderResponse{
@@ -490,6 +498,8 @@ func (ex *Exchange) handleGetOrdersByUserid(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid user ID"})
 	}
 
+	// ex.mu.RLock()
+
 	orderbooksOrders := ex.Orders[int64(userId)]
 	if orderbooksOrders == nil {
 		return c.JSON(http.StatusOK, []*OrderResponse{}) // Return empty array instead of null
@@ -513,5 +523,8 @@ func (ex *Exchange) handleGetOrdersByUserid(c echo.Context) error {
 
 		orders = append(orders, orderResp)
 	}
+
+	// ex.mu.RUnlock()
+
 	return c.JSON(http.StatusOK, orders)
 }
