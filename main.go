@@ -77,6 +77,12 @@ func makeMarketSimple(Client *client.Client) error {
 			if err != nil {
 				return err
 			}
+			orders, err := Client.GetOrdersByUserid(1)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf(" \n orders of user is these \n %v", orders)
 			myBids[bestBid+stradle] = orderId.OrderId
 		}
 

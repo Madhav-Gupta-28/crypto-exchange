@@ -33,9 +33,11 @@ type (
 	Market    string
 
 	Exchange struct {
-		client     *ethclient.Client
-		Users      map[int64]*User
-		orders     map[int64]int64
+		client *ethclient.Client
+		Users  map[int64]*User
+
+		// orders maps a user to it's orders
+		Orders     map[int64][]*orderbook.Order
 		orderbooks map[Market]*orderbook.Orderbook
 		PrivateKey *ecdsa.PrivateKey
 	}
@@ -71,9 +73,10 @@ type (
 	}
 
 	MatchedOrder struct {
-		Price float64
-		Size  float64
-		Id    int64
+		UserId int64
+		Price  float64
+		Size   float64
+		Id     int64
 	}
 
 	User struct {
@@ -145,6 +148,7 @@ func StartServer() {
 		new(big.Float).Quo(new(big.Float).SetInt(user2Balance), big.NewFloat(1e18)))
 
 	e.POST("/order", ex.handlePlaceOrder)
+	e.GET("/order/:userId", ex.handleGetOrdersByUserid)
 	e.GET("/book/:market", ex.handleGetOrderbook)
 	e.GET("/book", ex.handleGetBook)
 	e.DELETE("/order/:orderID", ex.handleCancelOrder)
@@ -178,7 +182,7 @@ func NewExchange(privateKey string, client *ethclient.Client) *Exchange {
 	ex := &Exchange{
 		client:     client,
 		Users:      make(map[int64]*User),
-		orders:     make(map[int64]int64),
+		Orders:     make(map[int64][]*orderbook.Order),
 		orderbooks: make(map[Market]*orderbook.Orderbook),
 		PrivateKey: pv,
 	}
@@ -210,14 +214,19 @@ func (ex *Exchange) handlePlaceMarketOrder(market Market, order *orderbook.Order
 	totalFilled := 0.0
 	sumPrice := 0.0
 	for i := 0; i < len(matches); i++ {
+		var limitUserId int64
+		limitUserId = matches[i].Bid.UserId
+
 		id := matches[i].Bid.Id
 		if !isBid {
 			id = matches[i].Ask.Id
+			limitUserId = matches[i].Ask.UserId
 		}
 		matchedOrders[i] = &MatchedOrder{
-			Price: matches[i].Price,
-			Size:  matches[i].SizeFilled,
-			Id:    id,
+			UserId: limitUserId,
+			Price:  matches[i].Price,
+			Size:   matches[i].SizeFilled,
+			Id:     id,
 		}
 		totalFilled += matches[i].SizeFilled
 		sumPrice += matches[i].Price * matches[i].SizeFilled
@@ -279,6 +288,7 @@ func (ex *Exchange) handleMatches(matches []orderbook.Match) error {
 func (ex *Exchange) handlePlaceLimitOrder(market Market, price float64, order *orderbook.Order) error {
 	ob := ex.orderbooks[market]
 	ob.PlaceLimitOrder(price, order)
+	ex.Orders[order.UserId] = append(ex.Orders[order.UserId], order)
 	fmt.Printf("new Limit Order Placed [ %.2f] | size [%.2f]", order.Limit.Price, order.Size)
 	return nil
 }
@@ -303,11 +313,29 @@ func (ex *Exchange) handlePlaceOrder(c echo.Context) error {
 
 	// MARKET ORDER
 	if placeorderdata.Type == MARKETORDER {
-		matches, _ := ex.handlePlaceMarketOrder(market, order)
+		matches, matchedOrders := ex.handlePlaceMarketOrder(market, order)
 
 		err := ex.handleMatches(matches)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, err.Error())
+		}
+
+		// Delete the matched order from the orderbook when the order is filled
+		for _, matchedOrder := range matchedOrders {
+
+			userOrders := ex.Orders[placeorderdata.UserId]
+
+			for i, order := range userOrders {
+				if matchedOrder.UserId == order.UserId {
+					if order.IsFilled() {
+						if order.Id == matchedOrder.Id {
+							userOrders[i] = userOrders[len(userOrders)-1]
+							userOrders = userOrders[:len(userOrders)-1]
+						}
+					}
+				}
+			}
+			ex.Orders[placeorderdata.UserId] = userOrders
 		}
 	}
 
@@ -453,4 +481,37 @@ func TransferETH(client *ethclient.Client, from *ecdsa.PrivateKey, to string, am
 
 	return client.SendTransaction(context.Background(), signedTx)
 
+}
+
+func (ex *Exchange) handleGetOrdersByUserid(c echo.Context) error {
+	userIdStr := c.Param("userId")
+	userId, err := strconv.Atoi(userIdStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid user ID"})
+	}
+
+	orderbooksOrders := ex.Orders[int64(userId)]
+	if orderbooksOrders == nil {
+		return c.JSON(http.StatusOK, []*OrderResponse{}) // Return empty array instead of null
+	}
+
+	orders := make([]*OrderResponse, 0, len(orderbooksOrders))
+
+	for _, order := range orderbooksOrders {
+		orderResp := &OrderResponse{
+			Id:        order.Id,
+			UserId:    order.UserId,
+			Size:      order.Size,
+			Bid:       order.Bid,
+			TimeStamp: order.TimeStamp,
+		}
+
+		// Only set price if Limit exists
+		if order.Limit != nil {
+			orderResp.Price = order.Limit.Price
+		}
+
+		orders = append(orders, orderResp)
+	}
+	return c.JSON(http.StatusOK, orders)
 }

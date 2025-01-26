@@ -149,7 +149,7 @@ func (l *Limit) String() string {
 	return fmt.Sprintf("[price] : %2.f and [total volume] : %2.f", l.Price, l.TotalVolumne)
 }
 
-func (o *Order) isFilled() bool {
+func (o *Order) IsFilled() bool {
 	return o.Size == 0
 }
 
@@ -192,11 +192,11 @@ func (l *Limit) Fill(o *Order) []Match {
 		matches = append(matches, match)
 		l.TotalVolumne -= match.SizeFilled
 
-		if order.isFilled() {
+		if order.IsFilled() {
 			ordersToDelete = append(ordersToDelete, order)
 		}
 
-		if o.isFilled() {
+		if o.IsFilled() {
 			break
 		}
 	}

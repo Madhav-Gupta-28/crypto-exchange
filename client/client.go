@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Madhav-Gupta-28/crypto-exchange/orderbook"
 	"github.com/Madhav-Gupta-28/crypto-exchange/server"
 )
 
@@ -150,4 +151,22 @@ func (c *Client) GetBestAskPrice(market server.Market) (float64, error) {
 		return 0, err
 	}
 	return bestAskResponse.Price, nil
+}
+
+func (c *Client) GetOrdersByUserid(userId int64) ([]*orderbook.Order, error) {
+	e := fmt.Sprintf("%s/order/%d", ENDPOINT, userId)
+	req, err := http.NewRequest(http.MethodGet, e, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	orders := []*orderbook.Order{}
+	err = json.NewDecoder(resp.Body).Decode(&orders)
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
 }
