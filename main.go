@@ -155,43 +155,4 @@ func main() {
 	marketOrderPlacer(c)
 
 	select {}
-
-	// for {
-	// 	params := &client.PlaceLimitOrderParams{
-	// 		UserId: 69,
-	// 		Size:   5,
-	// 		Price:  100,
-	// 		Bid:    false,
-	// 	}
-
-	// 	_, err := c.PlaceLimitOrder(params)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 	}
-
-	// 	time.Sleep(1 * time.Second)
-
-	// 	params = &client.PlaceLimitOrderParams{
-	// 		UserId: 79,
-	// 		Size:   1,
-	// 		Price:  100,
-	// 		Bid:    true,
-	// 	}
-
-	// 	err = c.PlaceMarketOrder(params)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 	}
-
-	// 	bestAskPrice, err := c.GetBestAskPrice(server.Market("ETH"))
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 	}
-
-	// 	fmt.Println(bestAskPrice)
-
-	// }
-
-	//select {}
-
 }

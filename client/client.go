@@ -170,3 +170,21 @@ func (c *Client) GetOrdersByUserid(userId int64) ([]*orderbook.Order, error) {
 	}
 	return orders, nil
 }
+
+func (c *Client) GetTrades(market string) ([]*orderbook.Trade, error) {
+	e := ENDPOINT + "/trades/" + market
+	req, err := http.NewRequest(http.MethodGet, e, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	trades := []*orderbook.Trade{}
+	err = json.NewDecoder(resp.Body).Decode(&trades)
+	if err != nil {
+		return nil, err
+	}
+	return trades, nil
+}

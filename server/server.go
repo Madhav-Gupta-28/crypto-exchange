@@ -156,20 +156,12 @@ func StartServer() {
 
 	e.POST("/order", ex.handlePlaceOrder)
 	e.GET("/order/:userId", ex.handleGetOrdersByUserid)
+	e.GET("/trades/:market", ex.handleGetTrades)
 	e.GET("/book/:market", ex.handleGetOrderbook)
 	e.GET("/book", ex.handleGetBook)
 	e.DELETE("/order/:orderID", ex.handleCancelOrder)
 	e.GET("/book/:market/bid", ex.handleGetBestBid)
 	e.GET("/book/:market/ask", ex.handleGetBestAsk)
-
-	// // Getting rhe balance of the account
-	// account := common.HexToAddress("0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
-	// balance, err := client.BalanceAt(context.Background(), account, nil)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Println(balance)
 
 	e.Start(":3000")
 
@@ -527,4 +519,13 @@ func (ex *Exchange) handleGetOrdersByUserid(c echo.Context) error {
 	// ex.mu.RUnlock()
 
 	return c.JSON(http.StatusOK, orders)
+}
+
+func (ex *Exchange) handleGetTrades(c echo.Context) error {
+	market := Market(c.Param("market"))
+	ob, ok := ex.orderbooks[market]
+	if !ok {
+		return c.JSON(http.StatusNotFound, map[string]any{"message": "Orderbook of This Market not found"})
+	}
+	return c.JSON(http.StatusOK, ob.Trades)
 }
